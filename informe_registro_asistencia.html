@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe de Registro y Asistencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#12161c;
+    --sub:#68707c;
+    --line:#e7e9ec;
+    --card:#ffffff;
+    --blue:#2f6feb;
+    --blue-soft:#e8f0ff;
+    --green:#0fa968;
+    --green-soft:#e4f7ee;
+    --red:#e5484d;
+    --red-soft:#fdeaea;
+    --amber:#e08a1e;
+    --amber-soft:#fdf2e0;
+    --violet:#7c5cff;
+    --shadow: 0 1px 2px rgba(18,22,28,.04), 0 8px 24px -12px rgba(18,22,28,.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);}
+  body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-.01em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit;}
+  ::selection{background:var(--blue-soft);}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line);
+    padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--violet));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:14px;flex:none;
+  }
+  .brand h1{font-size:17px;font-weight:700;}
+  .brand p{margin:0;font-size:12px;color:var(--sub);}
+  .file-pill{
+    display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--sub);
+    border:1px solid var(--line);padding:7px 8px 7px 12px;border-radius:100px;background:#fff;
+  }
+  .file-pill strong{color:var(--ink);font-weight:600;}
+  .file-pill button{
+    border:none;background:var(--ink);color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:100px;cursor:pointer;
+  }
+  .file-pill button:hover{background:#000;}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px 80px;}
+  .hero{padding:56px 0 28px;}
+  .hero .eyebrow{font-size:12px;font-weight:600;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;}
+  .hero h2{font-size:34px;font-weight:700;margin-top:8px;max-width:640px;}
+  .hero p.lede{color:var(--sub);font-size:15px;max-width:560px;margin-top:10px;line-height:1.55;}
+
+  /* ---------- dropzone ---------- */
+  .dropzone{
+    margin-top:28px;border:1.5px dashed #c9cfd8;border-radius:16px;padding:44px 28px;text-align:center;
+    background:#fbfcfd;transition:.15s;cursor:pointer;
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--blue);background:var(--blue-soft);}
+  .dropzone .icon{font-size:28px;margin-bottom:10px;}
+  .dropzone h3{font-size:16px;font-weight:600;}
+  .dropzone p{color:var(--sub);font-size:13px;margin-top:6px;}
+  .dropzone .btn{
+    display:inline-block;margin-top:16px;background:var(--ink);color:#fff;font-weight:600;font-size:13px;
+    padding:10px 20px;border-radius:100px;cursor:pointer;border:none;
+  }
+  #fileInput{display:none;}
+  .err-box{margin-top:14px;background:var(--red-soft);color:#a4161a;border:1px solid #f3c9ca;padding:12px 16px;border-radius:10px;font-size:13px;display:none;}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:28px;flex-wrap:wrap;}
+  .tab{
+    padding:11px 4px;margin-right:20px;font-size:13.5px;font-weight:600;color:var(--sub);cursor:pointer;
+    border-bottom:2px solid transparent;user-select:none;
+  }
+  .tab.active{color:var(--ink);border-color:var(--blue);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  /* ---------- kpis ---------- */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+  .kpi{
+    border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;background:var(--card);box-shadow:var(--shadow);
+  }
+  .kpi .lbl{font-size:11.5px;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .kpi .val{font-family:'Space Grotesk';font-size:30px;font-weight:700;margin-top:8px;line-height:1;}
+  .kpi .sub{font-size:12px;color:var(--sub);margin-top:6px;}
+  .kpi .bar{height:5px;border-radius:4px;background:#eef0f3;margin-top:12px;overflow:hidden;}
+  .kpi .bar i{display:block;height:100%;border-radius:4px;}
+
+  /* ---------- section/grid ---------- */
+  .section-title{display:flex;align-items:baseline;justify-content:space-between;margin:36px 0 14px;}
+  .section-title h3{font-size:18px;font-weight:700;}
+  .section-title span{font-size:12.5px;color:var(--sub);}
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+  .card{border:1px solid var(--line);border-radius:14px;padding:20px;background:var(--card);box-shadow:var(--shadow);}
+  .card h4{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+  .card .cap{font-size:12px;color:var(--sub);margin-bottom:14px;}
+  canvas{max-width:100%;}
+
+  /* ---------- matrix ---------- */
+  .matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .mcell{border-radius:10px;padding:14px;text-align:center;}
+  .mcell .n{font-family:'Space Grotesk';font-size:22px;font-weight:700;}
+  .mcell .t{font-size:11.5px;color:var(--sub);margin-top:4px;}
+
+  /* ---------- ranking / scoreboard ---------- */
+  .rank-toggle{display:flex;gap:6px;background:#f2f3f5;border-radius:100px;padding:3px;width:max-content;margin-bottom:16px;}
+  .rank-toggle button{
+    border:none;background:transparent;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:100px;cursor:pointer;color:var(--sub);
+  }
+  .rank-toggle button.active{background:#fff;color:var(--ink);box-shadow:var(--shadow);}
+  .scoreboard{display:flex;flex-direction:column;gap:8px;}
+  .score-row{display:grid;grid-template-columns:26px 110px 1fr 54px;align-items:center;gap:10px;}
+  .score-row .rk{font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--sub);}
+  .score-row.top1 .rk, .score-row.top1 .city{color:var(--amber);}
+  .score-row .city{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .score-row .track{height:9px;background:#eef0f3;border-radius:6px;overflow:hidden;}
+  .score-row .track i{display:block;height:100%;border-radius:6px;}
+  .score-row .pct{font-size:12px;font-weight:700;text-align:right;font-family:'IBM Plex Mono';}
+
+  /* ---------- filters ---------- */
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;}
+  .filters select, .filters input[type=text]{
+    border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  .filters input[type=text]{min-width:200px;}
+  .filters .spacer{flex:1;}
+  .btn-ghost{
+    border:1px solid var(--line);background:#fff;font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;color:var(--ink);
+  }
+  .btn-ghost:hover{background:#f7f8f9;}
+  .btn-solid{
+    border:none;background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;
+  }
+  .btn-solid:hover{background:#000;}
+
+  /* ---------- table ---------- */
+  .table-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+  .table-scroll{max-height:520px;overflow:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{
+    position:sticky;top:0;background:#fafbfc;text-align:left;padding:10px 14px;font-size:11px;font-weight:700;
+    color:var(--sub);text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  tbody td{padding:9px 14px;border-bottom:1px solid #f1f2f4;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+  tbody tr:hover{background:#fafbfc;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:700;}
+  .pill.si{background:var(--green-soft);color:var(--green);}
+  .pill.no{background:var(--red-soft);color:var(--red);}
+  .table-foot{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:12px;color:var(--sub);border-top:1px solid var(--line);background:#fafbfc;}
+
+  .empty-note{text-align:center;padding:60px 20px;color:var(--sub);font-size:13px;}
+  footer{text-align:center;padding:30px 0 10px;color:var(--sub);font-size:11.5px;}
+
+  #appArea{display:none;}
+
+  @media (max-width:860px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <img src="https://i.imgur.com/CUn2ew5.jpeg" alt="Logo" style="height:60px;">
+  </div>
+  <div id="filePillArea"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="err-box" id="globalErrBox" style="margin-top:20px;"></div>
+
+  <div id="uploadArea">
+    <div class="hero">
+      <div class="eyebrow">Paso 1</div>
+      <h2>Sube tu archivo Excel para generar el informe</h2>
+      <p class="lede">Se procesa localmente en tu navegador. Se toma la hoja <strong>“Consolidado”</strong> y únicamente las columnas A–K (Documento a “¿Se encuentra en la base?”).</p>
+
+      <div class="dropzone" id="dropzone">
+        <div class="icon">⇪</div>
+        <h3>Arrastra aquí tu archivo .xlsx</h3>
+        <p>o haz clic para seleccionarlo desde tu equipo</p>
+        <button class="btn" type="button" id="browseBtn">Seleccionar archivo</button>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+      </div>
+      <div class="err-box" id="errBox"></div>
+    </div>
+  </div>
+
+  <div id="appArea">
+
+    <div class="tabs">
+      <div class="tab active" data-tab="resumen">Resumen general</div>
+      <div class="tab" data-tab="bogota">Bogotá</div>
+      <div class="tab" data-tab="ciudades">Ciudades</div>
+    </div>
+
+    <!-- ============ RESUMEN ============ -->
+    <div class="tab-panel active" id="panel-resumen">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Total convocados</div>
+          <div class="val mono" id="k-total">—</div>
+          <div class="sub" id="k-total-sub">Bogotá + ciudades</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Asistencia global</div>
+          <div class="val mono" id="k-asis-global">—</div>
+          <div class="sub" id="k-asis-global-sub">del total de convocados</div>
+          <div class="bar"><i id="k-asis-global-bar" style="background:var(--green);width:0%"></i></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Registro Bogotá</div>
+          <div class="val mono" id="k-reg-bog">—</div>
+          <div class="sub" id="k-reg-bog-sub">se registraron</div>
+          <div class="bar"><i id="k-reg-bog-bar" style="background:var(--blue);width:0%"></i></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Ciudades convocadas</div>
+          <div class="val mono" id="k-nciudades">—</div>
+          <div class="sub" id="k-nciudades-sub">sedes fuera de Bogotá</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h4>Asistencia: Bogotá vs. Ciudades</h4>
+          <div class="cap">Comparación de asistentes frente a convocados por grupo</div>
+          <canvas id="chartGrupoBarras" height="230"></canvas>
+        </div>
+        <div class="card">
+          <h4>Participación por grupo</h4>
+          <div class="cap">Distribución de convocados</div>
+          <canvas id="chartGrupoDona" height="230"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ BOGOTA ============ -->
+    <div class="tab-panel" id="panel-bogota">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Convocados Bogotá</div>
+          <div class="val mono" id="b-total">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">% Registro</div>
+          <div class="val mono" id="b-reg-pct">—</div>
+          <div class="bar"><i id="b-reg-bar" style="background:var(--blue);width:0%"></i></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">% Asistencia</div>
+          <div class="val mono" id="b-asis-pct">—</div>
+          <div class="bar"><i id="b-asis-bar" style="background:var(--green);width:0%"></i></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Asistencia sin registro</div>
+          <div class="val mono" id="b-walkin">—</div>
+          <div class="sub">asistieron sin haberse registrado</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h4>¿Se registró?</h4>
+          <div class="cap">Bogotá — todas las sedes</div>
+          <canvas id="chartBogRegistro" height="220"></canvas>
+        </div>
+        <div class="card">
+          <h4>¿Asistió?</h4>
+          <div class="cap">Bogotá — todas las sedes</div>
+          <canvas id="chartBogAsistio" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>Cruce Registro × Asistencia</h3><span>Bogotá</span></div>
+      <div class="card">
+        <div class="matrix" id="bogMatrix"></div>
+      </div>
+
+      <div class="section-title"><h3>Comparativo por sede</h3><span>Calle 26 · 71 · 72 · 90</span></div>
+      <div class="card">
+        <canvas id="chartBogSedes" height="220"></canvas>
+      </div>
+
+      <div class="section-title"><h3>Detalle Bogotá</h3><span id="b-count-sub">—</span></div>
+      <div class="filters" id="filtersBog"></div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Documento</th><th>Nombre</th><th>Sede</th><th>Empresa</th><th>Área / Proceso</th><th>Jefe inmediato</th><th>¿Se registró?</th><th>¿Asistió?</th><th>Notas</th>
+            </tr></thead>
+            <tbody id="tbodyBog"></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="footBog">0 registros</span>
+          <button class="btn-solid" id="csvBog">Descargar CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ CIUDADES ============ -->
+    <div class="tab-panel" id="panel-ciudades">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Ciudades</div>
+          <div class="val mono" id="c-nciudades">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Convocados</div>
+          <div class="val mono" id="c-total">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">% Asistencia promedio</div>
+          <div class="val mono" id="c-asis-pct">—</div>
+          <div class="bar"><i id="c-asis-bar" style="background:var(--green);width:0%"></i></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Mejor ciudad</div>
+          <div class="val mono" id="c-best" style="font-size:20px;">—</div>
+          <div class="sub" id="c-best-sub">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card" style="grid-column:1/-1;">
+          <h4>Ranking de asistencia por ciudad</h4>
+          <div class="cap">% de asistencia sobre convocados, de mayor a menor</div>
+          <canvas id="chartCiudadRanking" height="320"></canvas>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>Competencia de ciudades</h3><span>Top 5</span></div>
+      <div class="card">
+        <div class="rank-toggle">
+          <button class="active" data-mode="mejor">Top 5 mejor asistencia</button>
+          <button data-mode="peor">Top 5 menor asistencia</button>
+        </div>
+        <div class="scoreboard" id="scoreboard"></div>
+      </div>
+
+      <div class="section-title"><h3>Detalle ciudades</h3><span id="c-count-sub">—</span></div>
+      <div class="filters" id="filtersCiu"></div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Documento</th><th>Nombre</th><th>Ciudad</th><th>Empresa</th><th>Área / Proceso</th><th>Jefe inmediato</th><th>¿Asistió?</th><th>Notas</th>
+            </tr></thead>
+            <tbody id="tbodyCiu"></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="footCiu">0 registros</span>
+          <button class="btn-solid" id="csvCiu">Descargar CSV</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Informe generado localmente en el navegador · ningún dato se envía a un servidor</footer>
+</div>
+
+<script>
+(function(){
+  const BOGOTA_SEDES = ['CALLE 26','CALLE 71','CALLE 72','CALLE 90'];
+  let RECORDS = [];
+  let charts = {};
+
+  // ---------------- helpers ----------------
+  function norm(v){ return (v===undefined||v===null) ? '' : String(v).trim(); }
+  function upper(v){ return norm(v).toUpperCase(); }
+  function yn(v){
+    const u = upper(v);
+    if(u==='SI'||u==='SÍ') return 'SI';
+    if(u==='NO') return 'NO';
+    return '';
+  }
+  function pct(n,d){ return d>0 ? Math.round((n/d)*1000)/10 : 0; }
+  function esc(v){ return norm(v).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function titleCase(s){
+    return norm(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function csvEscape(v){
+    v = norm(v);
+    if(/[",\n;]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }
+  function downloadCSV(filename, rows){
+    const content = rows.map(r => r.map(csvEscape).join(';')).join('\n');
+    const blob = new Blob(['\ufeff'+content], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function destroy(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+  function safeChart(id, canvasId, config){
+    try{
+      destroy(id);
+      if(typeof Chart === 'undefined'){ console.error('Chart.js no está disponible.'); return; }
+      const el = document.getElementById(canvasId);
+      if(!el) return;
+      charts[id] = new Chart(el, config);
+    }catch(err){
+      console.error('Error creando gráfica', id, err);
+    }
+  }
+
+  const PALETTE = ['#2f6feb','#0fa968','#e08a1e','#7c5cff','#e5484d','#0aa5c2','#c2410c','#65a30d'];
+
+  // ---------------- file loading ----------------
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const browseBtn = document.getElementById('browseBtn');
+  const errBox = document.getElementById('errBox');
+
+  browseBtn.addEventListener('click', (e)=>{ e.stopPropagation(); fileInput.click(); });
+  dropzone.addEventListener('click', ()=> fileInput.click());
+  dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', (e)=>{
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', (e)=>{
+    if(e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  function showError(msg){
+    errBox.textContent = msg;
+    errBox.style.display = 'block';
+  }
+  function showGlobalError(msg){
+    const box = document.getElementById('globalErrBox');
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+
+  function handleFile(file){
+    errBox.style.display = 'none';
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheetName = wb.SheetNames.find(n => n.trim().toLowerCase() === 'consolidado');
+        if(!sheetName){
+          showError('No se encontró una hoja llamada "Consolidado" en el archivo. Hojas disponibles: ' + wb.SheetNames.join(', '));
+          return;
+        }
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, range: ws['!ref'], defval:''});
+        if(!rows.length){ showError('La hoja "Consolidado" está vacía.'); return; }
+
+        // columns A-K => index 0..10
+        const dataRows = rows.slice(1);
+        const records = [];
+        dataRows.forEach(r=>{
+          const sedeRaw = norm(r[2]);
+          if(!sedeRaw) return; // skip blank rows
+          const isBog = BOGOTA_SEDES.includes(upper(sedeRaw));
+          records.push({
+            documento: norm(r[0]),
+            nombre: norm(r[1]),
+            sede: sedeRaw,
+            sedeUpper: upper(sedeRaw),
+            grupo: isBog ? 'BOGOTA' : 'CIUDAD',
+            empresa: norm(r[3]),
+            jefe: norm(r[4]),
+            correoJefe: norm(r[5]),
+            registro: yn(r[6]),
+            asistio: yn(r[7]),
+            notas: norm(r[8]),
+            area: norm(r[9]),
+            enBase: norm(r[10]),
+          });
+        });
+
+        if(!records.length){ showError('No se encontraron filas de datos válidas en las columnas A–K.'); return; }
+
+        RECORDS = records;
+        document.getElementById('uploadArea').style.display = 'none';
+        document.getElementById('appArea').style.display = 'block';
+        renderFilePill(file.name, records.length);
+        buildFilters();
+        try{
+          renderAll();
+        }catch(renderErr){
+          console.error(renderErr);
+          showGlobalError('El archivo se leyó correctamente, pero ocurrió un error al generar el informe: ' + renderErr.message);
+        }
+      }catch(err){
+        console.error(err);
+        showError('No se pudo leer el archivo. Verifica que sea un .xlsx válido. (' + err.message + ')');
+      }
+    };
+    reader.onerror = ()=> showError('Ocurrió un error leyendo el archivo.');
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderFilePill(name, count){
+    document.getElementById('filePillArea').innerHTML = `
+      <div class="file-pill">
+        <span>📄 <strong>${esc(name)}</strong> · ${count} registros</span>
+        <button id="changeFileBtn">Cambiar archivo</button>
+      </div>`;
+    document.getElementById('changeFileBtn').addEventListener('click', ()=>{
+      document.getElementById('appArea').style.display = 'none';
+      document.getElementById('uploadArea').style.display = 'block';
+      document.getElementById('filePillArea').innerHTML = '';
+      fileInput.value = '';
+    });
+  }
+
+  // ---------------- tabs ----------------
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------------- filters state ----------------
+  let filterBog = { sede:'ALL', asistio:'ALL', registro:'ALL', area:'ALL', q:'' };
+  let filterCiu = { sede:'ALL', asistio:'ALL', area:'ALL', q:'' };
+
+  function buildFilters(){
+    const bog = RECORDS.filter(r=>r.grupo==='BOGOTA');
+    const ciu = RECORDS.filter(r=>r.grupo==='CIUDAD');
+
+    const bogSedes = [...new Set(bog.map(r=>r.sede))].sort();
+    const bogAreas = [...new Set(bog.map(r=>r.area).filter(Boolean))].sort();
+    document.getElementById('filtersBog').innerHTML = `
+      <select id="fb-sede"><option value="ALL">Todas las sedes</option>${bogSedes.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+      <select id="fb-registro"><option value="ALL">Registro: todos</option><option value="SI">Se registró: Sí</option><option value="NO">Se registró: No</option></select>
+      <select id="fb-asistio"><option value="ALL">Asistencia: todos</option><option value="SI">Asistió: Sí</option><option value="NO">Asistió: No</option></select>
+      <select id="fb-area"><option value="ALL">Todas las áreas</option>${bogAreas.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('')}</select>
+      <input type="text" id="fb-q" placeholder="Buscar por nombre o documento…">
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="fb-clear">Limpiar filtros</button>
+    `;
+    ['sede','registro','asistio','area'].forEach(k=>{
+      document.getElementById('fb-'+k).addEventListener('change', e=>{ filterBog[k]=e.target.value; renderBogotaTable(); });
+    });
+    document.getElementById('fb-q').addEventListener('input', e=>{ filterBog.q = e.target.value; renderBogotaTable(); });
+    document.getElementById('fb-clear').addEventListener('click', ()=>{
+      filterBog = {sede:'ALL',asistio:'ALL',registro:'ALL',area:'ALL',q:''};
+      document.getElementById('filtersBog').querySelectorAll('select').forEach(s=>s.value='ALL');
+      document.getElementById('fb-q').value='';
+      renderBogotaTable();
+    });
+
+    const ciuSedes = [...new Set(ciu.map(r=>r.sede))].sort();
+    const ciuAreas = [...new Set(ciu.map(r=>r.area).filter(Boolean))].sort();
+    document.getElementById('filtersCiu').innerHTML = `
+      <select id="fc-sede"><option value="ALL">Todas las ciudades</option>${ciuSedes.map(s=>`<option value="${esc(s)}">${esc(titleCase(s))}</option>`).join('')}</select>
+      <select id="fc-asistio"><option value="ALL">Asistencia: todos</option><option value="SI">Asistió: Sí</option><option value="NO">Asistió: No</option></select>
+      <select id="fc-area"><option value="ALL">Todas las áreas</option>${ciuAreas.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('')}</select>
+      <input type="text" id="fc-q" placeholder="Buscar por nombre o documento…">
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="fc-clear">Limpiar filtros</button>
+    `;
+    ['sede','asistio','area'].forEach(k=>{
+      document.getElementById('fc-'+k).addEventListener('change', e=>{ filterCiu[k]=e.target.value; renderCiudadesTable(); });
+    });
+    document.getElementById('fc-q').addEventListener('input', e=>{ filterCiu.q = e.target.value; renderCiudadesTable(); });
+    document.getElementById('fc-clear').addEventListener('click', ()=>{
+      filterCiu = {sede:'ALL',asistio:'ALL',area:'ALL',q:''};
+      document.getElementById('filtersCiu').querySelectorAll('select').forEach(s=>s.value='ALL');
+      document.getElementById('fc-q').value='';
+      renderCiudadesTable();
+    });
+
+    document.getElementById('csvBog').addEventListener('click', ()=>{
+      const rows = applyBogFilter();
+      const head = ['Documento','Nombre','Sede','Empresa','Área/Proceso','Jefe inmediato','Correo jefe','¿Se registró?','¿Asistió?','Notas','¿En la base?'];
+      const body = rows.map(r=>[r.documento,r.nombre,r.sede,r.empresa,r.area,r.jefe,r.correoJefe,r.registro,r.asistio,r.notas,r.enBase]);
+      downloadCSV('bogota_detalle.csv', [head, ...body]);
+    });
+    document.getElementById('csvCiu').addEventListener('click', ()=>{
+      const rows = applyCiuFilter();
+      const head = ['Documento','Nombre','Ciudad','Empresa','Área/Proceso','Jefe inmediato','Correo jefe','¿Asistió?','Notas','¿En la base?'];
+      const body = rows.map(r=>[r.documento,r.nombre,r.sede,r.empresa,r.area,r.jefe,r.correoJefe,r.asistio,r.notas,r.enBase]);
+      downloadCSV('ciudades_detalle.csv', [head, ...body]);
+    });
+  }
+
+  function applyBogFilter(){
+    return RECORDS.filter(r=>r.grupo==='BOGOTA').filter(r=>{
+      if(filterBog.sede!=='ALL' && r.sede!==filterBog.sede) return false;
+      if(filterBog.registro!=='ALL' && r.registro!==filterBog.registro) return false;
+      if(filterBog.asistio!=='ALL' && r.asistio!==filterBog.asistio) return false;
+      if(filterBog.area!=='ALL' && r.area!==filterBog.area) return false;
+      if(filterBog.q){
+        const q = filterBog.q.toLowerCase();
+        if(!(r.nombre.toLowerCase().includes(q) || r.documento.toLowerCase().includes(q))) return false;
+      }
+      return true;
+    });
+  }
+  function applyCiuFilter(){
+    return RECORDS.filter(r=>r.grupo==='CIUDAD').filter(r=>{
+      if(filterCiu.sede!=='ALL' && r.sede!==filterCiu.sede) return false;
+      if(filterCiu.asistio!=='ALL' && r.asistio!==filterCiu.asistio) return false;
+      if(filterCiu.area!=='ALL' && r.area!==filterCiu.area) return false;
+      if(filterCiu.q){
+        const q = filterCiu.q.toLowerCase();
+        if(!(r.nombre.toLowerCase().includes(q) || r.documento.toLowerCase().includes(q))) return false;
+      }
+      return true;
+    });
+  }
+
+  // ---------------- render: tables ----------------
+  function renderBogotaTable(){
+    const rows = applyBogFilter();
+    document.getElementById('tbodyBog').innerHTML = rows.map(r=>`
+      <tr>
+        <td>${esc(r.documento)}</td><td>${esc(r.nombre)}</td><td>${esc(r.sede)}</td><td>${esc(r.empresa)}</td>
+        <td>${esc(r.area)}</td><td>${esc(r.jefe)}</td>
+        <td>${pillFor(r.registro)}</td><td>${pillFor(r.asistio)}</td><td>${esc(r.notas)}</td>
+      </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--sub);padding:30px;">Sin resultados para estos filtros</td></tr>`;
+    document.getElementById('footBog').textContent = rows.length + ' registro(s)';
+  }
+  function renderCiudadesTable(){
+    const rows = applyCiuFilter();
+    document.getElementById('tbodyCiu').innerHTML = rows.map(r=>`
+      <tr>
+        <td>${esc(r.documento)}</td><td>${esc(r.nombre)}</td><td>${esc(titleCase(r.sede))}</td><td>${esc(r.empresa)}</td>
+        <td>${esc(r.area)}</td><td>${esc(r.jefe)}</td>
+        <td>${pillFor(r.asistio)}</td><td>${esc(r.notas)}</td>
+      </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--sub);padding:30px;">Sin resultados para estos filtros</td></tr>`;
+    document.getElementById('footCiu').textContent = rows.length + ' registro(s)';
+  }
+  function pillFor(v){
+    if(v==='SI') return '<span class="pill si">Sí</span>';
+    if(v==='NO') return '<span class="pill no">No</span>';
+    return '<span style="color:var(--sub);">—</span>';
+  }
+
+  // ---------------- render: everything ----------------
+  function renderAll(){
+    const bog = RECORDS.filter(r=>r.grupo==='BOGOTA');
+    const ciu = RECORDS.filter(r=>r.grupo==='CIUDAD');
+
+    // ===== RESUMEN =====
+    const totalAll = RECORDS.length;
+    const asisAll = RECORDS.filter(r=>r.asistio==='SI').length;
+    document.getElementById('k-total').textContent = totalAll;
+    document.getElementById('k-total-sub').textContent = `${bog.length} Bogotá · ${ciu.length} ciudades`;
+    const pAsisAll = pct(asisAll, totalAll);
+    document.getElementById('k-asis-global').textContent = pAsisAll + '%';
+    document.getElementById('k-asis-global-sub').textContent = `${asisAll} de ${totalAll} asistieron`;
+    document.getElementById('k-asis-global-bar').style.width = pAsisAll + '%';
+
+    const regBogSi = bog.filter(r=>r.registro==='SI').length;
+    const pRegBog = pct(regBogSi, bog.length);
+    document.getElementById('k-reg-bog').textContent = pRegBog + '%';
+    document.getElementById('k-reg-bog-sub').textContent = `${regBogSi} de ${bog.length} se registraron`;
+    document.getElementById('k-reg-bog-bar').style.width = pRegBog + '%';
+
+    const nCiudades = new Set(ciu.map(r=>r.sedeUpper)).size;
+    document.getElementById('k-nciudades').textContent = nCiudades;
+
+    safeChart('chartGrupoBarras', 'chartGrupoBarras', {
+      type:'bar',
+      data:{
+        labels:['Bogotá','Ciudades'],
+        datasets:[
+          {label:'Convocados', data:[bog.length, ciu.length], backgroundColor:'#dbe6fb', borderRadius:6, maxBarThickness:56},
+          {label:'Asistieron', data:[bog.filter(r=>r.asistio==='SI').length, ciu.filter(r=>r.asistio==='SI').length], backgroundColor:'#0fa968', borderRadius:6, maxBarThickness:56},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}},
+        scales:{ y:{beginAtZero:true, grid:{color:'#f1f2f4'}}, x:{grid:{display:false}} }
+      }
+    });
+
+    safeChart('chartGrupoDona', 'chartGrupoDona', {
+      type:'doughnut',
+      data:{ labels:['Bogotá','Ciudades'], datasets:[{ data:[bog.length, ciu.length], backgroundColor:['#2f6feb','#7c5cff'], borderWidth:0 }] },
+      options:{ cutout:'68%', plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}} }
+    });
+
+    // ===== BOGOTA =====
+    document.getElementById('b-total').textContent = bog.length;
+    document.getElementById('b-reg-pct').textContent = pRegBog + '%';
+    document.getElementById('b-reg-bar').style.width = pRegBog + '%';
+    const asisBogSi = bog.filter(r=>r.asistio==='SI').length;
+    const pAsisBog = pct(asisBogSi, bog.length);
+    document.getElementById('b-asis-pct').textContent = pAsisBog + '%';
+    document.getElementById('b-asis-bar').style.width = pAsisBog + '%';
+    const walkin = bog.filter(r=>r.registro==='NO' && r.asistio==='SI').length;
+    document.getElementById('b-walkin').textContent = walkin;
+    document.getElementById('b-count-sub').textContent = bog.length + ' personas convocadas en Bogotá';
+
+    safeChart('chartBogRegistro', 'chartBogRegistro', {
+      type:'doughnut',
+      data:{ labels:['Sí se registró','No se registró'], datasets:[{ data:[regBogSi, bog.length-regBogSi], backgroundColor:['#2f6feb','#e7e9ec'], borderWidth:0 }] },
+      options:{ cutout:'68%', plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}} }
+    });
+    safeChart('chartBogAsistio', 'chartBogAsistio', {
+      type:'doughnut',
+      data:{ labels:['Sí asistió','No asistió'], datasets:[{ data:[asisBogSi, bog.length-asisBogSi], backgroundColor:['#0fa968','#e7e9ec'], borderWidth:0 }] },
+      options:{ cutout:'68%', plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}} }
+    });
+
+    // matrix
+    const m_si_si = bog.filter(r=>r.registro==='SI' && r.asistio==='SI').length;
+    const m_si_no = bog.filter(r=>r.registro==='SI' && r.asistio==='NO').length;
+    const m_no_si = bog.filter(r=>r.registro==='NO' && r.asistio==='SI').length;
+    const m_no_no = bog.filter(r=>r.registro==='NO' && r.asistio==='NO').length;
+    document.getElementById('bogMatrix').innerHTML = `
+      <div class="mcell" style="background:var(--green-soft);"><div class="n" style="color:var(--green);">${m_si_si}</div><div class="t">Se registró y asistió</div></div>
+      <div class="mcell" style="background:var(--red-soft);"><div class="n" style="color:var(--red);">${m_si_no}</div><div class="t">Se registró y no asistió</div></div>
+      <div class="mcell" style="background:var(--amber-soft);"><div class="n" style="color:var(--amber);">${m_no_si}</div><div class="t">No se registró pero asistió</div></div>
+      <div class="mcell" style="background:#f2f3f5;"><div class="n" style="color:var(--sub);">${m_no_no}</div><div class="t">No se registró ni asistió</div></div>
+    `;
+
+    // sedes comparativo
+    const sedeLabels = [...new Set(bog.map(r=>r.sede))].sort();
+    const sedeReg = sedeLabels.map(s=>{ const g=bog.filter(r=>r.sede===s); return pct(g.filter(r=>r.registro==='SI').length, g.length); });
+    const sedeAsis = sedeLabels.map(s=>{ const g=bog.filter(r=>r.sede===s); return pct(g.filter(r=>r.asistio==='SI').length, g.length); });
+    safeChart('chartBogSedes', 'chartBogSedes', {
+      type:'bar',
+      data:{ labels:sedeLabels, datasets:[
+        {label:'% Registro', data:sedeReg, backgroundColor:'#2f6feb', borderRadius:6, maxBarThickness:40},
+        {label:'% Asistencia', data:sedeAsis, backgroundColor:'#0fa968', borderRadius:6, maxBarThickness:40},
+      ]},
+      options:{ responsive:true, plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}},
+        scales:{ y:{beginAtZero:true, max:100, grid:{color:'#f1f2f4'}, ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}} } }
+    });
+
+    renderBogotaTable();
+
+    // ===== CIUDADES =====
+    document.getElementById('c-nciudades').textContent = nCiudades;
+    document.getElementById('c-total').textContent = ciu.length;
+    const asisCiuSi = ciu.filter(r=>r.asistio==='SI').length;
+    const pAsisCiu = pct(asisCiuSi, ciu.length);
+    document.getElementById('c-asis-pct').textContent = pAsisCiu + '%';
+    document.getElementById('c-asis-bar').style.width = pAsisCiu + '%';
+    document.getElementById('c-count-sub').textContent = ciu.length + ' personas convocadas fuera de Bogotá';
+
+    const ciudadStats = [...new Set(ciu.map(r=>r.sede))].map(s=>{
+      const g = ciu.filter(r=>r.sede===s);
+      const asis = g.filter(r=>r.asistio==='SI').length;
+      return { ciudad: s, total: g.length, asistieron: asis, pct: pct(asis, g.length) };
+    }).sort((a,b)=> b.pct - a.pct);
+
+    if(ciudadStats.length){
+      document.getElementById('c-best').textContent = titleCase(ciudadStats[0].ciudad);
+      document.getElementById('c-best-sub').textContent = ciudadStats[0].pct + '% de asistencia';
+    }
+
+    safeChart('chartCiudadRanking', 'chartCiudadRanking', {
+      type:'bar',
+      data:{
+        labels: ciudadStats.map(c=>titleCase(c.ciudad)),
+        datasets:[{
+          label:'% Asistencia', data: ciudadStats.map(c=>c.pct),
+          backgroundColor: ciudadStats.map((c,i)=> i===0 ? '#0fa968' : (c.pct<50 ? '#e5484d' : '#2f6feb')),
+          borderRadius:6, maxBarThickness:22
+        }]
+      },
+      options:{
+        indexAxis:'y', responsive:true,
+        plugins:{legend:{display:false}, tooltip:{callbacks:{ label: (ctx)=>{
+          const c = ciudadStats[ctx.dataIndex];
+          return `${c.asistieron} de ${c.total} asistieron (${c.pct}%)`;
+        }}}},
+        scales:{ x:{beginAtZero:true, max:100, grid:{color:'#f1f2f4'}, ticks:{callback:v=>v+'%'}}, y:{grid:{display:false}} }
+      }
+    });
+
+    window._ciudadStats = ciudadStats;
+    renderScoreboard('mejor');
+
+    document.querySelectorAll('.rank-toggle button').forEach(b=>{
+      b.onclick = ()=>{
+        document.querySelectorAll('.rank-toggle button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderScoreboard(b.dataset.mode);
+      };
+    });
+
+    renderCiudadesTable();
+  }
+
+  function renderScoreboard(mode){
+    const stats = window._ciudadStats || [];
+    const withData = stats.filter(c=>c.total>0);
+    const list = mode==='mejor'
+      ? [...withData].sort((a,b)=>b.pct-a.pct).slice(0,5)
+      : [...withData].sort((a,b)=>a.pct-b.pct).slice(0,5);
+    const maxPct = Math.max(...list.map(c=>c.pct), 1);
+    document.getElementById('scoreboard').innerHTML = list.map((c,i)=>`
+      <div class="score-row ${i===0?'top1':''}">
+        <div class="rk">${i+1}</div>
+        <div class="city">${esc(titleCase(c.ciudad))}</div>
+        <div class="track"><i style="width:${(c.pct/ (mode==='mejor'?maxPct:100))*100}%;background:${mode==='mejor'?'#0fa968':'#e5484d'}"></i></div>
+        <div class="pct">${c.pct}%</div>
+      </div>
+    `).join('') || '<div class="empty-note">Sin datos suficientes</div>';
+  }
+
+})();
+</script>
+</body>
+</html>
